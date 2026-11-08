@@ -1,0 +1,674 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Watch Slab Print Sim</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: wide viewport stage on the left, slicer-style readouts and settings column on the right; stacks on phones. */
+:root{
+  --bg:#eceff3;
+  --panel:#f8f9fb;
+  --ink:#141a21;
+  --muted:#586573;
+  --line:#d2d9e0;
+  --accent:#2f6df6;
+  --accent-ink:#ffffff;
+  --stage:#dde3ea;
+  --bedc:#c6cfd9;
+  --grid1:#aab5c2;
+  --grid2:#bcc6d1;
+  --good:#1c9a5f;
+  --warn:#bf8400;
+  --crit:#d3372c;
+  --font-d:'Barlow Condensed','Arial Narrow',sans-serif;
+  --font-b:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --font-m:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1116;--panel:#151b22;--ink:#e5ebf1;--muted:#8793a0;--line:#26303a;
+    --accent:#5f8fff;--accent-ink:#0b1220;--stage:#090c10;--bedc:#18202a;--grid1:#2d3a47;--grid2:#202a35;
+    --good:#3ccf8a;--warn:#e0a82a;--crit:#ff6a5e;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1116;--panel:#151b22;--ink:#e5ebf1;--muted:#8793a0;--line:#26303a;
+  --accent:#5f8fff;--accent-ink:#0b1220;--stage:#090c10;--bedc:#18202a;--grid1:#2d3a47;--grid2:#202a35;
+  --good:#3ccf8a;--warn:#e0a82a;--crit:#ff6a5e;color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:14px;line-height:1.45;
+  padding-block:20px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--font-d);font-weight:600;font-size:34px;letter-spacing:.01em;margin:0;line-height:1.05;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.stagecol{min-width:0;display:flex;flex-direction:column;gap:10px}
+.stage{position:relative;background:var(--stage);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#view{height:clamp(340px,60vh,620px);width:100%}
+#view canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#view canvas:active{cursor:grabbing}
+.hud{position:absolute;left:14px;top:12px;pointer-events:none;font-family:var(--font-m)}
+.hud .big{font-family:var(--font-d);font-weight:600;font-size:34px;line-height:1;letter-spacing:.01em}
+.hud .sub{color:var(--muted);font-size:12px;margin-top:3px}
+.status{display:inline-block;margin-top:8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--ink)}
+.cams{position:absolute;right:10px;top:10px;display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:60%}
+.legend{position:absolute;left:12px;bottom:10px;right:12px;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--muted);pointer-events:none}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.nogl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.btn{background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:5px 10px;border-radius:4px;font-size:12px;line-height:1.2}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500;min-width:76px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.transport{display:grid;grid-template-columns:auto auto minmax(150px,1fr) minmax(190px,1.4fr);gap:10px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.ctl{display:flex;align-items:center;gap:8px;min-width:0}
+.ctl label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.ctl input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ctl output{font-family:var(--font-m);font-size:12px;min-width:48px;text-align:right}
+aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.card h2{font-family:var(--font-d);font-weight:600;font-size:17px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px;color:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:5px 12px}
+dt{color:var(--muted)}
+dd{margin:0;font-family:var(--font-m);font-variant-numeric:tabular-nums;text-align:right}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-bottom:9px}
+.row:last-child{margin-bottom:0}
+.row label{color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:5px 14px;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:500}
+select,input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 6px;font-family:var(--font-m);font-size:12px}
+input[type=number]{width:62px;text-align:right}
+.dims{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dims div{display:flex;flex-direction:column;gap:3px}
+.dims label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.dims input{width:100%}
+.row input[type=range]{width:120px;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.chk input{accent-color:var(--accent)}
+.gauge{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin:4px 0 8px}
+.gauge i{height:8px;border-radius:2px;background:var(--line)}
+.gauge i.on{background:var(--gc,var(--good))}
+.warn-h{display:flex;justify-content:space-between;align-items:baseline}
+.warn-h b{font-family:var(--font-d);font-weight:600;font-size:20px;letter-spacing:.03em}
+.note{color:var(--muted);font-size:12px;margin:0}
+@media (max-width:900px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  .transport{grid-template-columns:auto auto minmax(0,1fr)}
+  .transport .ctl.layerctl{grid-column:1 / -1}
+  header h1{font-size:28px}
+  .cams{max-width:70%}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Watch Slab Print Sim</h1>
+    <p>Layer-by-layer FDM preview of a rectangular smartwatch body, sized close to a Colmi P28 and printed in PETG or ABS. 0.4 mm nozzle, 1.75 mm filament, screen recess on top. Drag to orbit, scroll or pinch to zoom.</p>
+  </header>
+
+  <div class="main">
+    <div class="stagecol">
+      <div class="stage">
+        <div id="view" aria-label="3D print preview"></div>
+        <div class="nogl" id="nogl">WebGL is not available in this viewer, so the 3D preview cannot draw. The numbers on the right still update.</div>
+        <div class="hud">
+          <div class="big" id="hudLayer">Layer 0 / 0</div>
+          <div class="sub" id="hudZ">Z 0.00 mm</div>
+          <span class="status" id="hudStatus">Heating</span>
+        </div>
+        <div class="cams" role="group" aria-label="Camera">
+          <button class="btn" data-cam="iso">Iso</button>
+          <button class="btn" data-cam="top">Top</button>
+          <button class="btn" data-cam="front">Front</button>
+          <button class="btn" data-cam="side">Side</button>
+        </div>
+        <div class="legend">
+          <span><i style="background:#e5484d"></i>Outer wall</span>
+          <span><i style="background:#30a46c"></i>Inner wall</span>
+          <span><i style="background:#ff8a3d"></i>Sparse infill</span>
+          <span><i style="background:#e8b400"></i>Solid skin</span>
+          <span><i style="background:#3e9bff"></i>Brim</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn primary" id="btnPlay">Pause</button>
+        <button class="btn" id="btnRestart">Restart</button>
+        <div class="ctl">
+          <label for="speed">Speed</label>
+          <input type="range" id="speed" min="0" max="10" step="1" value="5">
+          <output id="speedOut">40×</output>
+        </div>
+        <div class="ctl layerctl">
+          <label for="scrub">Layer</label>
+          <input type="range" id="scrub" min="0" max="55" step="1" value="0">
+          <output id="scrubOut">0</output>
+        </div>
+      </div>
+    </div>
+
+    <aside>
+      <section class="card" aria-label="Live readouts">
+        <h2>Live</h2>
+        <dl>
+          <dt>Nozzle</dt><dd id="rNoz">22 °C</dd>
+          <dt>Bed</dt><dd id="rBed">22 °C</dd>
+          <dt>Part fan</dt><dd id="rFan">0 %</dd>
+          <dt>Elapsed</dt><dd id="rEl">0:00</dd>
+          <dt>Remaining</dt><dd id="rRem">0:00</dd>
+          <dt>Filament used</dt><dd id="rFil">0.00 m · 0.0 g</dd>
+        </dl>
+      </section>
+
+      <section class="card" aria-label="Estimate">
+        <h2>Estimate</h2>
+        <dl>
+          <dt>Layers</dt><dd id="eLay">—</dd>
+          <dt>Total time</dt><dd id="eTime">—</dd>
+          <dt>Heat-up</dt><dd id="ePre">—</dd>
+          <dt>Filament</dt><dd id="eFil">—</dd>
+        </dl>
+      </section>
+
+      <section class="card" aria-label="Warp risk">
+        <h2>Warp risk</h2>
+        <div class="warn-h"><b id="wLabel">Low</b><span class="note" id="wScore"></span></div>
+        <div class="gauge" id="wGauge"></div>
+        <p class="note" id="wText"></p>
+      </section>
+
+      <section class="card" aria-label="Print settings">
+        <h2>Settings</h2>
+        <div class="row">
+          <label>Material</label>
+          <div class="seg" role="group" aria-label="Material">
+            <button type="button" data-mat="PETG" aria-pressed="true">PETG</button>
+            <button type="button" data-mat="ABS" aria-pressed="false">ABS</button>
+          </div>
+        </div>
+        <div class="row">
+          <label for="inLh">Layer height</label>
+          <select id="inLh">
+            <option value="0.12">0.12 mm</option>
+            <option value="0.16">0.16 mm</option>
+            <option value="0.2" selected>0.20 mm</option>
+            <option value="0.28">0.28 mm</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="inInfill">Infill <span id="inInfillOut" style="font-family:var(--font-m)">20%</span></label>
+          <input type="range" id="inInfill" min="0" max="60" step="5" value="20">
+        </div>
+        <div class="row">
+          <label for="inWalls">Walls</label>
+          <select id="inWalls">
+            <option value="2" selected>2 loops</option>
+            <option value="3">3 loops</option>
+            <option value="4">4 loops</option>
+          </select>
+        </div>
+        <label class="chk"><input type="checkbox" id="inBrim" checked> Brim (6 loops)</label>
+        <label class="chk"><input type="checkbox" id="inEncl" checked> Enclosed chamber</label>
+        <div class="dims" style="margin-top:10px">
+          <div><label for="inL">Length</label><input type="number" id="inL" value="44" min="30" max="70" step="0.5"></div>
+          <div><label for="inW">Width</label><input type="number" id="inW" value="37" min="25" max="60" step="0.5"></div>
+          <div><label for="inH">Height</label><input type="number" id="inH" value="11" min="6" max="20" step="0.2"></div>
+          <div><label for="inR">Corner R</label><input type="number" id="inR" value="7" min="2" max="12" step="0.5"></div>
+        </div>
+        <p class="note" style="margin-top:8px">Dimensions in mm. Defaults approximate a P28-class body. The screen recess is 1.2 mm deep with a 2.2 mm bezel.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+//#PLAN-START
+const LW=0.45, FIL_A=Math.PI*0.875*0.875;
+const TYPE_KEYS=['outer','inner','infill','skin','first'];
+const MAT={
+  PETG:{nozzle:240,bed:80,fan:40,dens:1.27,pre:150,sp:{outer:35,inner:50,infill:70,skin:45,first:18}},
+  ABS:{nozzle:250,bed:100,fan:10,dens:1.04,pre:270,sp:{outer:40,inner:55,infill:75,skin:50,first:20}}
+};
+function rrLoop(w,h,r,n){
+  n=n||6;
+  r=Math.max(0.01,Math.min(r,w/2-0.01,h/2-0.01));
+  const cx=w/2-r, cy=h/2-r, pts=[];
+  const cs=[[cx,-cy,-Math.PI/2],[cx,cy,0],[-cx,cy,Math.PI/2],[-cx,-cy,Math.PI]];
+  for(const c of cs){for(let k=0;k<=n;k++){const a=c[2]+k/n*Math.PI/2;pts.push([c[0]+r*Math.cos(a),c[1]+r*Math.sin(a)]);}}
+  pts.push(pts[0]);
+  return pts;
+}
+function inRR(x,y,w,h,r){
+  const ax=Math.abs(x),ay=Math.abs(y);
+  if(ax>w/2||ay>h/2) return false;
+  const dx=Math.max(ax-(w/2-r),0),dy=Math.max(ay-(h/2-r),0);
+  return dx*dx+dy*dy<=r*r;
+}
+function buildPlan(s){
+  const m=MAT[s.mat], lh=s.lh, N=Math.max(1,Math.round(s.H/lh));
+  const depth=1.2, bezel=2.2;
+  const pw=s.L-2*bezel, ph=s.W-2*bezel, pr=Math.max(1,s.R-bezel);
+  const ringN=Math.max(1,Math.floor(bezel/(2*LW)));
+  const A={x0:[],y0:[],z0:[],x1:[],y1:[],z1:[],ty:[],ly:[],te:[],cv:[]};
+  let cur={x:-s.L/2-10,y:-s.W/2-10,z:18}, T=0, V=0, pendingExtra=0;
+  const layerEnd=[];
+  function seg(type,x,y,z,layer,extra){
+    const d=Math.hypot(x-cur.x,y-cur.y,z-cur.z);
+    if(d<0.004 && !extra) return;
+    let sp=150;
+    if(type!==255) sp=layer===0?m.sp.first:m.sp[TYPE_KEYS[type]];
+    T+=d/sp+(extra||0);
+    if(type!==255) V+=d*LW*lh;
+    A.x0.push(cur.x);A.y0.push(cur.y);A.z0.push(cur.z);
+    A.x1.push(x);A.y1.push(y);A.z1.push(z);
+    A.ty.push(type);A.ly.push(layer);A.te.push(T);A.cv.push(V);
+    cur={x:x,y:y,z:z};
+  }
+  function moveTo(x,y,z,layer){seg(255,x,y,z,layer,pendingExtra);pendingExtra=0;}
+  function loop(pts,type,z,layer){
+    moveTo(pts[0][0],pts[0][1],z,layer);
+    for(let k=1;k<pts.length;k++) seg(type,pts[k][0],pts[k][1],z,layer,0);
+  }
+  for(let i=0;i<N;i++){
+    const zt=(i+1)*lh, zm=zt-lh/2;
+    const inRecess=zm>s.H-depth;
+    const solid=(zt<=0.8+1e-6)||(!inRecess&&zm>s.H-depth-0.8)||(zm>s.H-0.8);
+    const nOut=inRecess?Math.min(s.walls,ringN):s.walls;
+    pendingExtra=0.4;
+    if(i===0){
+      for(let j=0;j<6;j++){
+        const d=(j+0.5)*LW;
+        loop(rrLoop(s.L+2*d,s.W+2*d,s.R+d,8),4,zt,i);
+      }
+    }
+    for(let k=nOut-1;k>=0;k--){
+      const d=(k+0.5)*LW;
+      loop(rrLoop(s.L-2*d,s.W-2*d,s.R-d,6),k===0?0:1,zt,i);
+    }
+    if(inRecess){
+      for(let k=nOut-1;k>=0;k--){
+        const d=(k+0.5)*LW;
+        loop(rrLoop(pw+2*d,ph+2*d,pr+d,6),k===0?0:1,zt,i);
+      }
+    }
+    if(solid||s.infill>0){
+      const wo=nOut*LW-0.06;
+      const pred=function(x,y){
+        if(!inRR(x,y,s.L-2*wo,s.W-2*wo,Math.max(0.2,s.R-wo))) return false;
+        if(inRecess && inRR(x,y,pw+2*wo,ph+2*wo,pr+wo)) return false;
+        return true;
+      };
+      const spacing=solid?LW:LW/(s.infill/100);
+      const a=(i%2?135:45)*Math.PI/180;
+      const dx=Math.cos(a), dy=Math.sin(a), nx=-dy, ny=dx;
+      const D=Math.hypot(s.L,s.W)/2+1;
+      const type=solid?3:2;
+      let kLine=0;
+      for(let o=-D+(i%3)*spacing/3;o<=D;o+=spacing){
+        let runs=[],inRun=false,t0=0,tPrev=0;
+        for(let t=-D;t<=D;t+=0.25){
+          const ins=pred(nx*o+dx*t,ny*o+dy*t);
+          if(ins&&!inRun){inRun=true;t0=t;}
+          else if(!ins&&inRun){inRun=false;if(tPrev-t0>0.6)runs.push([t0,tPrev]);}
+          tPrev=t;
+        }
+        if(inRun&&tPrev-t0>0.6) runs.push([t0,tPrev]);
+        if(!runs.length) continue;
+        if(kLine%2){runs.reverse();runs=runs.map(function(r){return [r[1],r[0]];});}
+        for(const r of runs){
+          moveTo(nx*o+dx*r[0],ny*o+dy*r[0],zt,i);
+          seg(type,nx*o+dx*r[1],ny*o+dy*r[1],zt,i,0);
+        }
+        kLine++;
+      }
+    }
+    layerEnd.push(T);
+  }
+  const n=A.ty.length;
+  return {
+    n:n,N:N,lh:lh,pre:m.pre,printT:T,vol:V,mass:V/1000*m.dens,filLen:V/FIL_A,
+    x0:Float32Array.from(A.x0),y0:Float32Array.from(A.y0),z0:Float32Array.from(A.z0),
+    x1:Float32Array.from(A.x1),y1:Float32Array.from(A.y1),z1:Float32Array.from(A.z1),
+    ty:Uint8Array.from(A.ty),ly:Uint16Array.from(A.ly),te:Float64Array.from(A.te),cv:Float64Array.from(A.cv),
+    layerEnd:layerEnd
+  };
+}
+function warpRisk(s){
+  let sc=s.mat==='ABS'?5:2;
+  sc+=Math.min(2,s.L*s.W/1500);
+  if(s.encl) sc-=s.mat==='ABS'?2.5:0.5; else if(s.mat==='ABS') sc+=0.5;
+  if(s.brim) sc-=1.2;
+  sc-=clamp((s.R-4)*0.12,0,0.8);
+  return clamp(sc,0,10);
+}
+//#PLAN-END
+
+const TCOL=[0xe5484d,0x30a46c,0xff8a3d,0xe8b400,0x3e9bff];
+const SPEEDS=[1,2,5,10,20,40,80,150,300,600,1200];
+const state={mat:'PETG',lh:0.2,infill:20,walls:2,brim:true,encl:true,L:44,W:37,H:11,R:7};
+let plan=null, t=0, playing=true, speedIdx=5, dirty=true, scrubbing=false, rebuildTimer=0, firstBuild=true;
+const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(reduced) playing=false;
+
+/* ---------- three.js scene ---------- */
+let renderer=null, scene, camera, lineGroup=null, head, headGeo, nozzle, bedMesh, grid, bodyGroup, clipPlane;
+const view=$('view');
+const cam={theta:-0.6,phi:1.0,r:150,target:null};
+let baseBed=null, gridA=null, gridB=null;
+function cssColor(name){return new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(name).trim());}
+
+function initThree(){
+  try{
+    renderer=new THREE.WebGLRenderer({antialias:true});
+  }catch(e){renderer=null;$('nogl').style.display='flex';return;}
+  renderer.localClippingEnabled=true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  view.appendChild(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(32,1,1,2000);
+  cam.target=new THREE.Vector3(0,5,0);
+  scene.add(new THREE.AmbientLight(0xffffff,0.85));
+  const dl=new THREE.DirectionalLight(0xffffff,0.7);dl.position.set(60,120,80);scene.add(dl);
+  clipPlane=new THREE.Plane(new THREE.Vector3(0,-1,0),0);
+
+  const bedGeo=new THREE.PlaneGeometry(120,120);
+  bedMesh=new THREE.Mesh(bedGeo,new THREE.MeshBasicMaterial({color:0x888888}));
+  bedMesh.rotation.x=-Math.PI/2;bedMesh.position.y=-0.06;scene.add(bedMesh);
+
+  headGeo=new THREE.BufferGeometry();
+  headGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));
+  head=new THREE.Line(headGeo,new THREE.LineBasicMaterial({color:0xff7a2f}));
+  head.frustumCulled=false;scene.add(head);
+
+  nozzle=new THREE.Group();
+  const tip=new THREE.Mesh(new THREE.ConeGeometry(1.6,2.6,16),new THREE.MeshStandardMaterial({color:0xc9a24a,metalness:0.6,roughness:0.4}));
+  tip.rotation.x=Math.PI;tip.position.y=1.3;
+  const blockMat=new THREE.MeshStandardMaterial({color:0x8d96a3,metalness:0.4,roughness:0.55,emissive:0xff3b10,emissiveIntensity:0});
+  const block=new THREE.Mesh(new THREE.BoxGeometry(12,7,10),blockMat);block.position.y=6.1;
+  const brk=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,16,12),new THREE.MeshStandardMaterial({color:0xb8bfc8,metalness:0.5,roughness:0.4}));brk.position.y=17.6;
+  nozzle.add(tip,block,brk);nozzle.userData.block=blockMat;
+  scene.add(nozzle);
+
+  applyTheme();
+  placeCam();
+  new ResizeObserver(resize).observe(view);resize();
+  bindOrbit();
+}
+function applyTheme(){
+  if(!renderer) return;
+  renderer.setClearColor(cssColor('--stage'));
+  baseBed=cssColor('--bedc');
+  bedMesh.material.color.copy(baseBed);
+  if(grid){scene.remove(grid);grid.geometry.dispose();grid.material.dispose();}
+  grid=new THREE.GridHelper(120,12,cssColor('--grid1'),cssColor('--grid2'));
+  grid.position.y=-0.03;scene.add(grid);
+  dirty=true;
+}
+function resize(){
+  if(!renderer) return;
+  const w=Math.max(100,view.clientWidth), h=Math.max(100,view.clientHeight);
+  renderer.setSize(w,h,false);
+  renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';
+  camera.aspect=w/h;
+  camera.updateProjectionMatrix();dirty=true;
+}
+function placeCam(){
+  const sp=Math.sin(cam.phi);
+  camera.position.set(cam.target.x+cam.r*sp*Math.sin(cam.theta),cam.target.y+cam.r*Math.cos(cam.phi),cam.target.z+cam.r*sp*Math.cos(cam.theta));
+  camera.lookAt(cam.target);dirty=true;
+}
+function bindOrbit(){
+  const el=renderer.domElement, ptrs=new Map();let pinch=0;
+  el.addEventListener('pointerdown',function(e){el.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===2){const a=[...ptrs.values()];pinch=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);}});
+  el.addEventListener('pointermove',function(e){
+    const p=ptrs.get(e.pointerId);if(!p) return;
+    const dx=e.clientX-p.x, dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptrs.size===1){cam.theta-=dx*0.008;cam.phi=clamp(cam.phi-dy*0.008,0.05,1.52);placeCam();}
+    else if(ptrs.size===2){const a=[...ptrs.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);if(pinch>0){cam.r=clamp(cam.r*pinch/d,45,420);placeCam();}pinch=d;}
+  });
+  const up=function(e){ptrs.delete(e.pointerId);pinch=0;};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',function(e){e.preventDefault();cam.r=clamp(cam.r*Math.exp(e.deltaY*0.001),45,420);placeCam();},{passive:false});
+}
+const PRESETS={iso:[-0.6,1.0],top:[0,0.05],front:[0,1.5],side:[Math.PI/2,1.5]};
+document.querySelectorAll('[data-cam]').forEach(function(b){b.addEventListener('click',function(){
+  if(!renderer) return;
+  const p=PRESETS[b.dataset.cam];cam.theta=p[0];cam.phi=p[1];placeCam();
+});});
+
+/* ---------- geometry from plan ---------- */
+function rrPath(p,w,h,r){
+  r=Math.min(r,w/2-0.01,h/2-0.01);
+  const x=-w/2,y=-h/2;
+  p.moveTo(x+r,y);p.lineTo(x+w-r,y);p.absarc(x+w-r,y+r,r,-Math.PI/2,0,false);
+  p.lineTo(x+w,y+h-r);p.absarc(x+w-r,y+h-r,r,0,Math.PI/2,false);
+  p.lineTo(x+r,y+h);p.absarc(x+r,y+h-r,r,Math.PI/2,Math.PI,false);
+  p.lineTo(x,y+r);p.absarc(x+r,y+r,r,Math.PI,1.5*Math.PI,false);
+}
+function disposeObj(o){
+  if(!o) return;
+  o.traverse(function(c){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});
+  scene.remove(o);
+}
+function buildScene(){
+  if(!renderer||!plan) return;
+  disposeObj(lineGroup);disposeObj(bodyGroup);
+  const P=plan;
+  let nv=0;
+  P.vs=new Uint32Array(P.n+1);
+  for(let i=0;i<P.n;i++){P.vs[i]=nv*2;if(P.ty[i]!==255)nv++;}
+  P.vs[P.n]=nv*2;P.visTotal=nv*2;
+  const pos=new Float32Array(nv*6), col=new Float32Array(nv*6), c=new THREE.Color();
+  let w=0;
+  for(let i=0;i<P.n;i++){
+    if(P.ty[i]===255) continue;
+    c.setHex(TCOL[P.ty[i]]);
+    pos[w]=P.x0[i];pos[w+1]=P.z1[i];pos[w+2]=-P.y0[i];
+    pos[w+3]=P.x1[i];pos[w+4]=P.z1[i];pos[w+5]=-P.y1[i];
+    col[w]=c.r;col[w+1]=c.g;col[w+2]=c.b;col[w+3]=c.r;col[w+4]=c.g;col[w+5]=c.b;
+    w+=6;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  g.setDrawRange(0,0);
+  lineGroup=new THREE.Group();
+  const a=new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true}));
+  const b=new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true}));
+  a.frustumCulled=false;b.frustumCulled=false;b.position.y=-P.lh*0.45;
+  lineGroup.add(a,b);lineGroup.userData.geo=g;
+  scene.add(lineGroup);
+
+  bodyGroup=new THREE.Group();
+  const depth=1.2,bezel=2.2;
+  const mc=state.mat==='ABS'?0x9aa3ad:0x3aa6b9;
+  const mat=new THREE.MeshLambertMaterial({color:mc,transparent:true,opacity:0.26,side:THREE.DoubleSide,depthWrite:false,clippingPlanes:[clipPlane]});
+  const baseShape=new THREE.Shape();rrPath(baseShape,state.L,state.W,state.R);
+  const base=new THREE.Mesh(new THREE.ExtrudeGeometry(baseShape,{depth:state.H-depth,bevelEnabled:false,curveSegments:10}),mat);
+  const ringShape=new THREE.Shape();rrPath(ringShape,state.L,state.W,state.R);
+  const hole=new THREE.Path();rrPath(hole,state.L-2*bezel,state.W-2*bezel,Math.max(1,state.R-bezel));
+  ringShape.holes.push(hole);
+  const ring=new THREE.Mesh(new THREE.ExtrudeGeometry(ringShape,{depth:depth,bevelEnabled:false,curveSegments:10}),mat);
+  ring.position.z=state.H-depth;
+  bodyGroup.add(base,ring);bodyGroup.rotation.x=-Math.PI/2;
+  scene.add(bodyGroup);
+  cam.target.set(0,state.H/2,0);placeCam();
+}
+
+/* ---------- plan lifecycle ---------- */
+const pad=function(n){return n<10?'0'+n:''+n;};
+function fmt(sec){
+  sec=Math.max(0,Math.round(sec));
+  const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;
+  return h?h+':'+pad(m)+':'+pad(s):m+':'+pad(s);
+}
+function readSettings(){
+  state.lh=+$('inLh').value;state.infill=+$('inInfill').value;state.walls=+$('inWalls').value;
+  state.brim=$('inBrim').checked;state.encl=$('inEncl').checked;
+  state.L=clamp(+$('inL').value||44,30,70);state.W=clamp(+$('inW').value||37,25,60);
+  state.H=clamp(+$('inH').value||11,6,20);state.R=clamp(+$('inR').value||7,2,12);
+  state.R=Math.min(state.R,state.L/2-3,state.W/2-3);
+}
+function rebuild(){
+  const total=plan?plan.pre+plan.printT:0;
+  const frac=plan&&total>0?clamp(t/total,0,1):0.18;
+  readSettings();
+  plan=buildPlan(state);
+  buildScene();
+  const tot=plan.pre+plan.printT;
+  t=firstBuild?tot*0.18:frac*tot;firstBuild=false;
+  $('scrub').max=plan.N;
+  $('eLay').textContent=plan.N+' × '+state.lh.toFixed(2)+' mm';
+  $('eTime').textContent=fmt(tot);
+  $('ePre').textContent=fmt(plan.pre);
+  $('eFil').textContent=(plan.filLen/1000).toFixed(2)+' m · '+plan.mass.toFixed(1)+' g';
+  updateWarp();
+  dirty=true;
+}
+function queueRebuild(){clearTimeout(rebuildTimer);rebuildTimer=setTimeout(rebuild,140);}
+function updateWarp(){
+  const sc=warpRisk(state), lvl=sc<2.5?0:sc<5?1:2;
+  const names=['Low','Moderate','High'], colors=['var(--good)','var(--warn)','var(--crit)'];
+  $('wLabel').textContent=names[lvl];$('wLabel').style.color=colors[lvl];
+  $('wScore').textContent=sc.toFixed(1)+' / 10';
+  const g=$('wGauge');
+  if(!g.children.length){for(let i=0;i<10;i++)g.appendChild(document.createElement('i'));}
+  const on=Math.round(sc);
+  Array.prototype.forEach.call(g.children,function(el,i){el.className=i<on?'on':'';el.style.setProperty('--gc',colors[lvl]);});
+  let txt;
+  if(state.mat==='ABS'&&!state.encl) txt='ABS cools unevenly in open air, so the long edges lift off the bed. Close the chamber and keep the brim on.';
+  else if(state.mat==='ABS') txt='Chamber heat and a brim hold the corners down. Keep the part fan near 10% so the layers stay bonded.';
+  else if(!state.brim) txt='PETG sticks well, but the long edges of a '+state.L+' mm slab can still curl without a brim.';
+  else txt='PETG at 80 °C bed sticks firmly and shrinks little. The '+state.R+' mm corner radius spreads corner stress.';
+  $('wText').textContent=txt;
+}
+
+/* ---------- per-frame application ---------- */
+let lastHud=0;
+function applyTime(){
+  const P=plan;if(!P) return;
+  const m=MAT[state.mat], tp=t-P.pre, total=P.pre+P.printT;
+  let vis=0,layerIdx=0,fil=0,zCut=0,hx,hy,hz,sx,sy,sz,headOn=false;
+  const homeX=-state.L/2-10,homeY=-state.W/2-10,homeZ=18;
+  if(tp<=0){
+    hx=homeX;hy=homeY;hz=homeZ;
+  }else{
+    let lo=0,hi=P.n;
+    while(lo<hi){const mid=(lo+hi)>>1;if(P.te[mid]>tp)hi=mid;else lo=mid+1;}
+    const i=lo;
+    if(i>=P.n){
+      const l=P.n-1;
+      hx=P.x1[l];hy=P.y1[l];hz=P.z1[l];vis=P.visTotal;layerIdx=P.N;fil=P.vol;zCut=state.H;
+    }else{
+      const t0=i?P.te[i-1]:0, f=clamp((tp-t0)/(P.te[i]-t0),0,1);
+      hx=P.x0[i]+(P.x1[i]-P.x0[i])*f;hy=P.y0[i]+(P.y1[i]-P.y0[i])*f;hz=P.z0[i]+(P.z1[i]-P.z0[i])*f;
+      vis=P.vs[i];layerIdx=P.ly[i];
+      const c0=i?P.cv[i-1]:0;fil=c0+(P.cv[i]-c0)*f;
+      zCut=(layerIdx+1)*P.lh;
+      if(P.ty[i]!==255){headOn=true;sx=P.x0[i];sy=P.y0[i];sz=P.z1[i];}
+    }
+  }
+  if(renderer){
+    lineGroup.userData.geo.setDrawRange(0,vis);
+    const hp=headGeo.attributes.position;
+    if(headOn){hp.setXYZ(0,sx,sz,-sy);hp.setXYZ(1,hx,hz,-hy);}else{hp.setXYZ(0,0,-50,0);hp.setXYZ(1,0,-50,0);}
+    hp.needsUpdate=true;
+    nozzle.position.set(hx,hz,-hy);
+    clipPlane.constant=zCut+0.02;
+  }
+  // temperatures
+  const nozF=t<P.pre?clamp(t/(P.pre*0.6),0,1):1, bedF=t<P.pre?clamp(t/P.pre,0,1):1;
+  const noz=22+(m.nozzle-22)*nozF+(t>=P.pre?0.7*Math.sin(t*0.9):0);
+  const bed=22+(m.bed-22)*bedF;
+  const fan=tp<=0?0:(layerIdx<1?0:layerIdx<2?m.fan/2:m.fan);
+  if(renderer){
+    nozzle.userData.block.emissiveIntensity=clamp((noz-60)/200,0,1)*0.55;
+    bedMesh.material.color.copy(baseBed).lerp(new THREE.Color(0xff5a2a),0.22*bedF);
+  }
+  const now=performance.now();
+  if(now-lastHud>70){
+    lastHud=now;
+    $('rNoz').textContent=Math.round(noz)+' / '+m.nozzle+' °C';
+    $('rBed').textContent=Math.round(bed)+' / '+m.bed+' °C';
+    $('rFan').textContent=Math.round(fan)+' %';
+    $('rEl').textContent=fmt(t);
+    $('rRem').textContent=fmt(total-t);
+    $('rFil').textContent=(fil/FIL_A/1000).toFixed(2)+' m · '+(fil/1000*m.dens).toFixed(1)+' g';
+    const shown=tp<=0?0:Math.min(P.N,layerIdx+(layerIdx>=P.N?0:1));
+    $('hudLayer').textContent='Layer '+shown+' / '+P.N;
+    $('hudZ').textContent='Z '+(tp<=0?'0.00':(layerIdx>=P.N?state.H:Math.min(state.H,(layerIdx+1)*P.lh)).toFixed(2))+' mm';
+    $('hudStatus').textContent=t>=total?'Complete':tp<=0?(nozF<1?'Heating nozzle':'Heating bed'):'Printing';
+    if(!scrubbing){$('scrub').value=layerIdx;}
+    $('scrubOut').textContent=layerIdx;
+  }
+}
+function frame(ts){
+  requestAnimationFrame(frame);
+  const dtms=frame.last?Math.min(ts-frame.last,100):16;frame.last=ts;
+  if(plan&&playing){
+    const total=plan.pre+plan.printT;
+    t+=dtms/1000*SPEEDS[speedIdx];
+    if(t>=total){t=total;playing=false;syncPlay();}
+    dirty=true;
+  }
+  if(dirty&&plan){dirty=false;applyTime();if(renderer)renderer.render(scene,camera);}
+}
+
+/* ---------- controls ---------- */
+function syncPlay(){$('btnPlay').textContent=playing?'Pause':(plan&&t>=plan.pre+plan.printT?'Replay':'Play');}
+$('btnPlay').addEventListener('click',function(){
+  if(plan&&t>=plan.pre+plan.printT){t=0;}
+  playing=!playing;if(plan&&t<=0)playing=true;
+  syncPlay();dirty=true;
+});
+$('btnRestart').addEventListener('click',function(){t=0;playing=true;syncPlay();dirty=true;});
+$('speed').addEventListener('input',function(){speedIdx=+this.value;$('speedOut').textContent=SPEEDS[speedIdx]+'×';});
+$('scrub').addEventListener('input',function(){
+  scrubbing=true;const L=+this.value;
+  t=plan.pre+(L<=0?0:plan.layerEnd[Math.min(L,plan.N)-1])+0.0001;
+  if(L>=plan.N)t=plan.pre+plan.printT;
+  t=Math.max(plan.pre+(L>0?0:0.0001),t);
+  if(L<=0)t=plan.pre*0.999;
+  dirty=true;lastHud=0;
+});
+$('scrub').addEventListener('change',function(){scrubbing=false;});
+document.querySelectorAll('[data-mat]').forEach(function(b){b.addEventListener('click',function(){
+  state.mat=b.dataset.mat;
+  document.querySelectorAll('[data-mat]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+  queueRebuild();
+});});
+['inLh','inWalls','inBrim','inEncl','inL','inW','inH','inR'].forEach(function(id){$(id).addEventListener('change',queueRebuild);});
+$('inInfill').addEventListener('input',function(){$('inInfillOut').textContent=this.value+'%';queueRebuild();});
+window.addEventListener('keydown',function(e){
+  if(e.code==='Space'&&!/INPUT|SELECT|BUTTON|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();$('btnPlay').click();}
+});
+if(window.matchMedia){
+  const mq=window.matchMedia('(prefers-color-scheme: dark)');
+  (mq.addEventListener?mq.addEventListener.bind(mq,'change'):mq.addListener.bind(mq))(applyTheme);
+}
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+initThree();
+rebuild();
+syncPlay();
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
